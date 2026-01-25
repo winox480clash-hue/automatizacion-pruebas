@@ -1,0 +1,45 @@
+name: Deploy a Pruebas + Rollback
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build + Tests
+        run: |
+          cd automatizacion-pruebas
+          mvn test
+          mvn package
+
+      - name: Acceptance Tests
+        run: |
+          chmod +x deploy/acceptance.sh
+          ./deploy/acceptance.sh
+
+      - name: Deploy a ambiente de prueba
+        run: |
+          chmod +x deploy/deploy.sh
+          ./deploy/deploy.sh
+
+      - name: Simular fallo para ejecutar rollback (evidencia)
+        run: |
+          echo "Simulando fallo controlado..."
+          exit 1
+
+      - name: Rollback
+        if: failure()
+        run: |
+          chmod +x deploy/rollback.sh
+          ./deploy/rollback.sh
